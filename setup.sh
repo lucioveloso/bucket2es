@@ -4,7 +4,9 @@ source project.conf
 
 if [ -n $1 ]; then
     bucket_tmp_name=$1
-else
+fi
+
+if [ -z $bucket_tmp_name ]; then
     echo "A temporary bucket name is required. Please set a bucket in project.conf file or execute $0 <temp-bucket>"
     echo "Note that this bucket will be used just to package your lambda during the cloudformation packaging."
     exit 1

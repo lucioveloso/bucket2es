@@ -2,7 +2,7 @@
 # Introduction
 
 
-This project is a Proof of Concept regarding transferring json files from a Bucket to a ElasticSearch. The technologies involved are:
+This project is a Proof of Concept regarding transferring json files from a Bucket to an ElasticSearch. The technologies involved are:
 
  * S3
  * Lambda
@@ -80,6 +80,8 @@ Done! You environment now is created and running.
     1 documents found
     {"age": 27, "name": "OfWdoxahwjjxClt"}
     ```
+
+* Check all the process in utils/howto.md
 
 #### General Notes:
 
