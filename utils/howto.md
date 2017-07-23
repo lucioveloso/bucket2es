@@ -1,4 +1,4 @@
-```bash
+```console
 [bucket2es]$ ./setup.sh temporary-bucket
 Uploading to tmp/b09dec7fa3e67ebac33be3569e15cda9  882757 / 882757.0  (100.00%)
 Successfully packaged artifacts and wrote output template to file packaged-stack.yaml.
