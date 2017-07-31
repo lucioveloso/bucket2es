@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 
+cd "$(dirname "$0")"
+
 source project.conf
+
+if [ $# -gt 1 ]; then
+    echo "Maximum of 1 argument."
+    echo "Execute $0 <temp-bucket>"
+    exit 1
+fi
 
 if [ -n $1 ]; then
     bucket_tmp_name=$1
@@ -14,18 +22,14 @@ fi
 
 ###### Setting up the environment ######
 
-cd "$(dirname "$0")"
-
 packaged_tmp_template="packaged-stack.yaml"
-
 
 # generating the packaged stack
 aws cloudformation package \
-	--template-file project/cfn-stack.yaml \
+	--template-file $cloudformation_template \
 	--s3-bucket $bucket_tmp_name \
 	--s3-prefix $bucket_tmp_prefix \
-	--output-template-file $packaged_tmp_template \
-
+	--output-template-file $packaged_tmp_template
 
 if [ $? -ne 0 ]; then
     echo "An unexpected error packaging =("
@@ -35,7 +39,7 @@ fi
 
 echo "aws cloudformation deploy... $0 is already executing it =)"
 echo "========================================================================="
-echo "== If it's the first time executing it... keep calm and grab a coffee. =="
+echo "== If it is the first time executing it... keep calm and grab a coffee. =="
 echo "========================================================================="
 echo
 

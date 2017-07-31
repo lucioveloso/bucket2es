@@ -9,7 +9,7 @@ Waiting for changeset to be created..
 Waiting for stack create/update to complete
 Successfully created/updated stack - bucket2es
 
-Your bucket name is bucket-bucket2es-123456789123-eu-west-1
+Your bucket name is bucket-bucket2es-432811670411-eu-west-1
 You ElasticSearch endpoint is: search-domain-bucket2es-42gx6qn47sn6td2o3uynbnyoca.eu-west-1.es.amazonaws.com
 * Please remember that you need authentication to connect to the endpoint.
 [bucket2es]$ 
