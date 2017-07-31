@@ -1,0 +1,152 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+# Parameters to determine the lambda behavior
+Parameters:
+  # rename - Rename to .indexed or .failed
+  # delete - Delete processed file
+  # none - Do not act
+  lambdaActionOnProcess:
+    Type: String
+    Default: rename
+    AllowedValues:
+      - rename
+      - delete
+      - none
+    Description: Lambda action after processing the file.
+
+# List of resources
+Resources:
+
+  # Resource: myBucket
+  # It will create a bucket to store the JSON files to be processed.
+  myBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        # Unique name to the bucket across region
+        Fn::Sub: bucket-${AWS::StackName}-${AWS::AccountId}-${AWS::Region}
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: s3:ObjectCreated:*
+          Filter:
+            S3Key:
+              Rules:
+              - Name: suffix
+                Value: json
+          Function:
+            Fn::GetAtt:
+            - myLambda
+            - Arn
+
+  # Resource: myElasticSearch
+  # A elasticsearch to index the input data
+  myElasticSearch:
+    Type: AWS::Elasticsearch::Domain
+    Properties:
+      ElasticsearchVersion: '5.3'
+      DomainName:
+        # Static name to avoid circular dependencies (AccessPolicies needs it now)
+        Fn::Sub: domain-${AWS::StackName}
+      AccessPolicies:
+        Statement:
+        - Action: es:*
+          Effect: Allow
+          Principal:
+            AWS:
+            - Ref: AWS::AccountId
+          Resource:
+            Fn::Sub: arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain-${AWS::StackName}/*
+        Version: '2012-10-17'
+      AdvancedOptions:
+        indices.fielddata.cache.size: ''
+        rest.action.multi.allow_explicit_index: 'true'
+      ElasticsearchClusterConfig:
+        DedicatedMasterEnabled: 'false'
+        InstanceCount: '1'
+        InstanceType: 'm3.medium.elasticsearch'
+        ZoneAwarenessEnabled: 'false'
+
+  # Resource: myLambda
+  # Lambda function to receive the notifications and process it
+  myLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Lambda Function bucket2es
+      Environment:
+        # Inject dynamic variables to be used in the lambda execution
+        Variables:
+          my_endpoint_url:
+            Fn::GetAtt:
+            - myElasticSearch
+            - DomainEndpoint
+          lambda_action_on_process:
+            Ref: lambdaActionOnProcess
+      Code: ./src/main/python/bucket2es/
+      Handler: index.lambda_handler
+      Role:
+        Fn::GetAtt:
+        - myLambdaRole
+        - Arn
+      Runtime: python3.6
+
+  # Resource: myLambdaInvokePermission
+  # It gives access to the Bucket invoke the myLambda
+  myLambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Ref: myLambda
+      Principal: s3.amazonaws.com
+      SourceAccount:
+        Ref: AWS::AccountId
+
+
+  # Resource: myLambdaRole
+  myLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+        Version: '2012-10-17'
+      Path: /
+      Policies:
+      - PolicyDocument:
+          Statement:
+          - Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Effect: Allow
+            Resource: '*'
+          - Action:
+            - s3:*
+            Effect: Allow
+            Resource:
+              Fn::Sub: arn:aws:s3:::bucket-${AWS::StackName}-${AWS::AccountId}-${AWS::Region}/*
+          - Action:
+            - es:*
+            Effect: Allow
+            Resource:
+              Fn::Join:
+              - ''
+              - - Fn::GetAtt:
+                  - myElasticSearch
+                  - DomainArn
+                - /*
+          Version: '2012-10-17'
+        PolicyName: main
+
+Outputs:
+  ElasticEndpoint:
+    Description: URL to ElasticSearch Endpoint
+    Value:
+      Fn::GetAtt:
+        - myElasticSearch
+        - DomainEndpoint
